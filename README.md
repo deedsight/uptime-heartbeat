@@ -1,2 +1,1 @@
-# uptime-heartbeat
-Public uptime ping
+Scheduled public uptime check.

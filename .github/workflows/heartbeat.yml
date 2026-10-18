@@ -1,0 +1,42 @@
+name: Uptime heartbeat
+
+# Scheduled public HTTPS checks only.
+on:
+  schedule:
+    - cron: '11,41 * * * *'
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: uptime-heartbeat
+  cancel-in-progress: false
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check all public HTTPS endpoints
+        shell: bash
+        run: |
+          set -uo pipefail
+          failed=0
+          for url in \
+            https://www.deedsight.com/api/health \
+            https://chat.letedge.com \
+            https://sign.letedge.com; do
+            code=000
+            if ! code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --location --max-redirs 5 --proto '=https' --proto-redir '=https' \
+              --connect-timeout 5 --max-time 20 "$url"); then
+              echo "::error::Unreachable endpoint: $url (HTTP $code)"
+              failed=1
+            elif [[ ! "$code" =~ ^2[0-9][0-9]$ ]]; then
+              echo "::error::HTTP $code from $url"
+              failed=1
+            else
+              echo "Healthy: $url (HTTP $code)"
+            fi
+          done
+          exit "$failed"
